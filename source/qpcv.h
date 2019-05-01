@@ -36,15 +36,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_qpcv.h"
 #include "ui_open_dialog.h"
-//#include "ibc/qt/gl_view.h"
-//#include "ibc/qt/gl_obj_view.h"
-#include "ibc/qt/gl_surface_plot.h"
-#include "ibc/gl/model/triangle.h"
-#include "ibc/gl/model/color_triangle.h"
-#include "ibc/gl/model/color_cube.h"
-#include "ibc/gl/model/solid_cube.h"
-#include "ibc/gl/shader/simple.h"
-#include "ibc/gl/shader/minimum.h"
+#include "ibc/qt/gl_point_cloud_view.h"
 
 // -----------------------------------------------------------------------------
 // qpcvWindow class
@@ -61,24 +53,12 @@ public:
   qpcvWindow(QWidget *parent = Q_NULLPTR)
   : QMainWindow(parent)
   {
-  //mGLView = new ibc::qt::GLView();
-  //mGLView = new ibc::qt::GLObjView();
-    mGLView = new ibc::qt::GLSurfacePlot();
-    
-    /*mModel.setShader(&mShader);
-    mGLView->addShader(&mShader);
-    mGLView->addModel(&mModel);*/
+    mGLView = new ibc::qt::GLPointCloudView();
   
     size_t width = 640;
     size_t height = 480;
     //
-    ibc::image::ImageType imageType(
-      ibc::image::ImageType::PIXEL_TYPE_RAW,
-      ibc::image::ImageType::BUFFER_TYPE_PIXEL_ALIGNED,
-      ibc::image::ImageType::DATA_TYPE_8BIT);
-    ibc::image::ImageFormat imageFormat(imageType, width, height);
-    mImageData.allocateImageBuffer(imageFormat);
-    unsigned char *dataPtr = (unsigned char *)mImageData.getImageBufferPtr();
+    mData = new PointCloudData[width * height];
     double xPitch = 1.0 * 2.0 / (double )width;
   
     for (unsigned int i = 0; i < height; i++)
@@ -95,15 +75,21 @@ public:
           d = sqrt(k*x*x + k*y*y);
           z = sin(d) / d;
         }
-        z = 255.0 * z;
+        /*z = 255.0 * z;
         if (z > 255)
           z = 255;
         if (z < 0)
-          z = 0;
-        dataPtr[width * i + j] = (unsigned char )z;
+          z = 0;*/
+        mData[width * i + j].position[0] = x;
+        mData[width * i + j].position[1] = y;
+        mData[width * i + j].position[2] = z;
+        //
+        mData[width * i + j].color[0] = 1.0;
+        mData[width * i + j].color[1] = 1.0;
+        mData[width * i + j].color[2] = 1.0;
       }
-    mGLView->setImageDataPtr(&mImageData);
-  
+    mGLView->setDataPtr((float *)mData, width * height);
+
     ui.setupUi(this);
     setCentralWidget(mGLView);
   }
@@ -112,21 +98,19 @@ private:
   Ui::qpcvClass ui;
 
 protected:
-//ibc::qt::GLView *mGLView;
-//ibc::qt::GLObjView *mGLView;
-  ibc::qt::GLSurfacePlot *mGLView;
+  // structs -------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // vertex_info
+  // ---------------------------------------------------------------------------
+  typedef struct
+  {
+    GLfloat position[3];
+    GLfloat color[3];
+  } PointCloudData;
 
-//ibc::gl::shader::Minimum  mShader;
-//ibc::gl::shader::Simple  mShader;
-//ibc::gl::shader::PointSprite  mShader;
-
-//ibc::gl::model::Triangle  mModel;
-//ibc::gl::model::ColorTriangle  mModel;
-//ibc::gl::model::ColorCube  mModel;
-//ibc::gl::model::SolidCube  mModel;
-  ibc::gl::model::SurfacePoints  mModel;
-
-  ibc::qt::ImageData  mImageData;
+  // Member variables ----------------------------------------------------------
+  ibc::qt::GLPointCloudView *mGLView;
+  PointCloudData *mData;
 
 private slots:
   // ---------------------------------------------------------------------------
