@@ -1,0 +1,9 @@
+# qmake related files
+Makefile
+.qmake.stash
+moc_*.cpp
+moc_*.h
+ui_*.h
+
+# Outputdir
+output/
