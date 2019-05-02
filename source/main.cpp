@@ -36,6 +36,10 @@
 
 int main(int argc, char *argv[])
 {
+  // HiDPI setting
+//QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+//QApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
+
   QApplication a(argc, argv);
   qpcvWindow w;
   w.show();
