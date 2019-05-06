@@ -31,7 +31,8 @@
   \brief    
 */
 
-#pragma once
+#ifndef QPCV_WINDOW_H_
+#define QPCV_WINDOW_H_
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -43,7 +44,11 @@
 #include <QFileDialog>
 #include "ui_qpcv.h"
 #include "ui_open_dialog.h"
+// ibc related includes
 #include "ibc/qt/gl_point_cloud_view.h"
+#include "ibc/base/log.h"
+#include "ibc/gl/data.h"
+#include "ibc/gl/file/ply.h"
 
 // -----------------------------------------------------------------------------
 // qpcvWindow class
@@ -118,7 +123,7 @@ protected:
   // Member functions ----------------------------------------------------------
   bool  readPLY(const char *inFileName)
   {
-    printf("File : %s\n", inFileName);
+    /*printf("File : %s\n", inFileName);
     int fd = ::open(inFileName, O_RDONLY);
     if (fd == -1)
     {
@@ -181,7 +186,25 @@ protected:
       float nx, ny, nz;
       unsigned char r, g, b, a;
     };
-    struct PLYData  *dataPtr = (struct PLYData *)buf;
+    struct PLYData  *dataPtr = (struct PLYData *)buf;*/
+
+    ibc::gl::file::PLYHeader  *header;
+    void  *fileDataPtr;
+    size_t  fileDataSize;
+    char  *headerStrBufPtr;
+    ibc::gl::glXYZf_RGBAub  *dataPtr;
+    size_t  dataNum;
+
+    if (ibc::gl::file::PLYFile::readHeader(inFileName, &header, &fileDataPtr,
+                                       &fileDataSize, &headerStrBufPtr) == false)
+    {
+      return false;
+    }
+    if (ibc::gl::file::PLYFile::get_glXYZf_RGBub(*header, fileDataPtr, fileDataSize,
+                                                 &dataPtr, &dataNum) == false)
+    {
+      return false;
+    }
 
     float x_min, y_min, z_min;
     float x_max, y_max, z_max;
@@ -271,7 +294,6 @@ protected:
     return true;
   }
 
-
 private slots:
   // ---------------------------------------------------------------------------
   // on_actionOpen_triggered
@@ -302,3 +324,6 @@ private slots:
     close();
   }
 };
+
+#endif  // #ifdef QPCV_WINDOW_H_
+

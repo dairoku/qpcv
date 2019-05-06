@@ -2,5 +2,6 @@
 <!-- Komodo Project File - DO NOT EDIT -->
 <project id="d7d1bd7b-95a1-4f01-baa7-ff686c8bf3bb" kpf_version="5" name="lightPoint.komodoproject">
 <preference-set idref="d7d1bd7b-95a1-4f01-baa7-ff686c8bf3bb" id="project" preftype="project">
+  <long id="prefs_version">1</long>
 </preference-set>
 </project>
