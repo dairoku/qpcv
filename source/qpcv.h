@@ -34,6 +34,10 @@
 #ifndef QPCV_WINDOW_H_
 #define QPCV_WINDOW_H_
 
+// Macros (pre) ----------------------------------------------------------------
+//#define IBC_GL_FILE_PLY_TRACE_ENABLE
+
+// Includes --------------------------------------------------------------------
 #include <iostream>
 #include <stdio.h>
 #include <sys/types.h>
