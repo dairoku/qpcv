@@ -25,5 +25,4 @@ SOURCES += \
   main.cpp
 
 FORMS += \
-  qpcv.ui \
-  open_dialog.ui
+  qpcv.ui

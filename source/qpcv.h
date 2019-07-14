@@ -48,7 +48,6 @@
 #include <QtWidgets/QMainWindow>
 #include <QFileDialog>
 #include "ui_qpcv.h"
-#include "ui_open_dialog.h"
 // ibc related includes
 #include "ibc/qt/gl_point_cloud_view.h"
 #include "ibc/base/log.h"
@@ -70,54 +69,54 @@ public:
   qpcvWindow(QWidget *parent = Q_NULLPTR)
   : QMainWindow(parent)
   {
+    mOptFileNameSpecified = false;
+    mOptEnaleTestData = false;
+    
+    mInitFinished = false;
+    mData = NULL;
+    mDataNum = 0;
     mGLView = new ibc::qt::GLPointCloudView();
-  
-    size_t width = 640;
-    size_t height = 480;
-    //
-    mDataNum = width * height;
-    mData = new ibc::gl::glXYZf_RGBAub[mDataNum];
-    //
-    double xPitch = 1.0 * 2.0 / (double )width;
-    for (unsigned int i = 0; i < height; i++)
-      for (unsigned int j = 0; j < width; j++)
-      {
-        double x = -1.0 + xPitch * j;
-        double y = -1.0 + xPitch * i;
-        double k = (M_PI * 3.0) * (M_PI * 3.0);
-        double z, d;
-        if (x == 0 && y == 0)
-          z = 1;
-        else
-        {
-          d = sqrt(k*x*x + k*y*y);
-          z = sin(d) / d;
-        }
-        mData[width * i + j].x = x;
-        mData[width * i + j].y = y;
-        mData[width * i + j].z = z;
-        //
-        mData[width * i + j].r = (GLubyte )(z * 255);
-        mData[width * i + j].g = (GLubyte )(z * 255);
-        mData[width * i + j].b = (GLubyte )(z * 255);
-        mData[width * i + j].a = 255;
-      }
-    mGLView->setDataPtr((float *)mData, mDataNum);
 
-    ui.setupUi(this);
+    mUI.setupUi(this);
     setCentralWidget(mGLView);
   }
 
-private:
-  Ui::qpcvClass ui;
+  // Member variables ----------------------------------------------------------
+  bool  mOptFileNameSpecified;
+  bool  mOptEnaleTestData;
+  QString mFileName;
+
 
 protected:
   // Member variables ----------------------------------------------------------
+  bool  mInitFinished;
   ibc::qt::GLPointCloudView *mGLView;
   ibc::gl::glXYZf_RGBAub *mData;
   size_t  mDataNum;
 
   // Member functions ----------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // openFile
+  // ---------------------------------------------------------------------------
+  bool openFile(bool *outIsCanceled)
+  {
+    QString fileName = QFileDialog::getOpenFileName(
+                                        this,
+                                        tr("Open PLY file"),
+                                        "",
+                                        tr("PLY File (*.ply);;All Files (*)"));
+    if (fileName == "")
+    {
+      *outIsCanceled = true;
+      return false;
+    }
+
+    *outIsCanceled = false;
+    return readPLY(fileName.toStdString().c_str());
+  }
+  // ---------------------------------------------------------------------------
+  // readPLY
+  // ---------------------------------------------------------------------------
   bool  readPLY(const char *inFileName)
   {
     ibc::gl::file::PLYHeader  *header;
@@ -148,6 +147,92 @@ protected:
     mGLView->setModelFitParam(param);
     return true;
   }
+  // ---------------------------------------------------------------------------
+  // generateTestData
+  // ---------------------------------------------------------------------------
+  bool  generateTestData()
+  {
+    size_t width = 640;
+    size_t height = 480;
+    //
+    mDataNum = width * height;
+    mData = new ibc::gl::glXYZf_RGBAub[mDataNum];
+    if (mData == NULL)
+      return false;
+    //
+    double xPitch = 1.0 * 2.0 / (double )width;
+    for (unsigned int i = 0; i < height; i++)
+      for (unsigned int j = 0; j < width; j++)
+      {
+        double x = -1.0 + xPitch * j;
+        double y = -1.0 + xPitch * i;
+        double k = (M_PI * 3.0) * (M_PI * 3.0);
+        double z, d;
+        if (x == 0 && y == 0)
+          z = 1;
+        else
+        {
+          d = sqrt(k*x*x + k*y*y);
+          z = sin(d) / d;
+        }
+        mData[width * i + j].x = x;
+        mData[width * i + j].y = y;
+        mData[width * i + j].z = z;
+        //
+        mData[width * i + j].r = (GLubyte )(z * 255);
+        mData[width * i + j].g = (GLubyte )(z * 255);
+        mData[width * i + j].b = (GLubyte )(z * 255);
+        mData[width * i + j].a = 255;
+      }
+
+    GLfloat param[4];
+    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, param);
+    mGLView->setDataPtr((float *)mData, mDataNum);
+    mGLView->setModelFitParam(param);
+    return true;
+  }
+
+  // Window (app) behavior implementations -------------------------------------
+  // ---------------------------------------------------------------------------
+  // appInit
+  // ---------------------------------------------------------------------------
+  virtual bool  appInit()
+  {
+    if (mOptFileNameSpecified)
+      return readPLY(mFileName.toStdString().c_str());
+    bool  isCanceled;
+    if (openFile(&isCanceled) == false)
+    {
+      if (mOptEnaleTestData && isCanceled)
+        return generateTestData();
+      return false;
+    }
+    return true;
+  }
+
+  // Qt Event functions --------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // showEvent
+  // ---------------------------------------------------------------------------
+  virtual void showEvent(QShowEvent *event)
+  {
+    QWidget::showEvent(event);
+    if (mInitFinished)
+      return;
+
+    mInitFinished = true;
+    if (appInit() == false)
+    {
+      // To quit the app here, we need to do the following tricky QTimer call here.
+      // Since this function is called just before the window is displayed.
+      // Calling QApplication::quit() or QCoreApplication::exit(EXIT_FAILURE)
+      // does not work here
+      QTimer::singleShot(0, this, SLOT(close()));
+    }
+  }
+
+private:
+  Ui::qpcvClass mUI;
 
 private slots:
   // ---------------------------------------------------------------------------
@@ -155,21 +240,12 @@ private slots:
   // ---------------------------------------------------------------------------
   void on_actionOpen_triggered(void)
   {
-    QString fileName = QFileDialog::getOpenFileName(this,
-    tr("Open PLY file"),
-    "",
-    tr("PLY File (*.ply);;All Files (*)")); 
-
-    readPLY(fileName.toStdString().c_str());
-
-    /*QDialog dialog(this);
-    Ui_OpenDialog openDialogUI;
-    openDialogUI.setupUi(&dialog);
-  
-    if (dialog.exec() == 0)
-      return;*/
-  
-    //printf("height: %s\n", openDialogUI.lineEdit_height->text().toStdString().c_str());
+    bool  isCanceled;
+    if (openFile(&isCanceled) == false)
+    {
+      if (isCanceled == false)
+        close();
+    }
   }
   // ---------------------------------------------------------------------------
   // on_actionQuit_triggered

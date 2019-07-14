@@ -36,12 +36,39 @@
 
 int main(int argc, char *argv[])
 {
+#ifdef QPCV_APP_HIGH_DPI_SCALING
   // HiDPI setting
-//QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-//QApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
+  QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+  QApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
+#endif
 
-  QApplication a(argc, argv);
-  qpcvWindow w;
-  w.show();
-  return a.exec();
+  QApplication app(argc, argv);
+  QApplication::setApplicationName("qpcv");
+  QApplication::setApplicationVersion("1.0");
+
+  QCommandLineParser  parser;
+  parser.addHelpOption();
+  parser.addVersionOption();
+  parser.addPositionalArgument("file", QApplication::translate("main", "File to open."));
+  parser.addOptions(
+  {
+    {"enableTestData", QApplication::translate("main", "Enable the test data generation.")}  // --debug option
+  });
+
+  qpcvWindow window;
+
+  parser.process(app);
+  const QStringList args = parser.positionalArguments();
+  if (args.isEmpty() == false)
+  {
+    window.mOptFileNameSpecified = true;
+    window.mFileName = args[0];
+  }
+  if (parser.isSet("enableTestData"))
+  {
+    window.mOptEnaleTestData = true;
+  }
+
+  window.show();
+  return app.exec();
 }
