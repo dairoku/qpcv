@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1040</width>
-    <height>894</height>
+    <height>911</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -254,6 +254,20 @@
                  <item row="4" column="1">
                   <widget class="QDoubleSpinBox" name="mColorMapTo"/>
                  </item>
+                 <item row="5" column="1">
+                  <widget class="QCheckBox" name="checkBox">
+                   <property name="text">
+                    <string>Show using single color setting</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QLabel" name="label_4">
+                   <property name="text">
+                    <string>Un-mapped points</string>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </item>
               </layout>
@@ -329,34 +343,6 @@
               <property name="labelAlignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_12">
-                <property name="text">
-                 <string>Show Boundary Box</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QCheckBox" name="mDisplayDoundaryBox">
-                <property name="text">
-                 <string>Enable</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_17">
-                <property name="text">
-                 <string>Show Axis</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QCheckBox" name="mDisplayAxis">
-                <property name="text">
-                 <string>Enable</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="0">
                <widget class="QLabel" name="label_18">
                 <property name="text">
@@ -392,17 +378,45 @@
                 </item>
                </layout>
               </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_49">
+              <item row="5" column="1">
+               <widget class="QCheckBox" name="mDisplaySmooth">
                 <property name="text">
-                 <string>Smooth control</string>
+                 <string>Smooth</string>
                 </property>
                </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QCheckBox" name="mDisplaySmooth">
+               <widget class="QCheckBox" name="mDisplayDoundaryBox">
                 <property name="text">
-                 <string>Enable</string>
+                 <string>Show</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QCheckBox" name="mDisplayAxis">
+                <property name="text">
+                 <string>Show</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_5">
+                <property name="text">
+                 <string>Boundary Box</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_6">
+                <property name="text">
+                 <string>Axis</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_12">
+                <property name="text">
+                 <string>Mouse Control</string>
                 </property>
                </widget>
               </item>
@@ -567,7 +581,7 @@
               <item row="3" column="0">
                <widget class="QLabel" name="label_36">
                 <property name="text">
-                 <string>Vertex</string>
+                 <string>Face</string>
                 </property>
                </widget>
               </item>
@@ -579,7 +593,7 @@
                </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QLabel" name="mPLYVertex">
+               <widget class="QLabel" name="mPLYFace">
                 <property name="text">
                  <string/>
                 </property>

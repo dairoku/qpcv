@@ -61,6 +61,20 @@ class qpcvWindow : public QMainWindow
 {
 Q_OBJECT
 
+    enum  PointColorMode
+    {
+      POINT_COLOR_MODE_SINGLE   = 0,
+      POINT_COLOR_MODE_MAP,
+      POINT_COLOR_MODE_FILE
+    };
+
+    enum  ColorMapAxis
+    {
+      COLOR_MAP_AXIS_X   = 0,
+      COLOR_MAP_AXIS_Y,
+      COLOR_MAP_AXIS_Z
+    };
+
 public:
   // Constructors and Destructor -----------------------------------------------
   // ---------------------------------------------------------------------------
@@ -69,30 +83,51 @@ public:
   qpcvWindow(QWidget *parent = Q_NULLPTR)
   : QMainWindow(parent)
   {
-    mOptFileNameSpecified = false;
-    mOptEnaleTestData = false;
-    
-    mInitFinished = false;
+    // Initialize app parameters
+    mAppInitCalled = false;
+    mAppOptFileNameSpecified = false;
+    mAppOptEnaleTestData = false;
+
+    // Initialize data related variables
     mData = NULL;
     mDataNum = 0;
     mGLView = new ibc::qt::GLPointCloudView();
 
+    // Initialize UI
     mUI.setupUi(this);
     setCentralWidget(mGLView);
+    initPointColorModeUI();
+    initColorMapUI();
   }
-
+  // ---------------------------------------------------------------------------
+  // ~qpcvWindow
+  // ---------------------------------------------------------------------------
+  virtual ~qpcvWindow()
+  {
+    if (mData != NULL)
+      delete mData;
+  }
   // Member variables ----------------------------------------------------------
-  bool  mOptFileNameSpecified;
-  bool  mOptEnaleTestData;
+  bool  mAppOptFileNameSpecified;
+  bool  mAppOptEnaleTestData;
   QString mFileName;
-
 
 protected:
   // Member variables ----------------------------------------------------------
-  bool  mInitFinished;
+  bool  mAppInitCalled;
   ibc::qt::GLPointCloudView *mGLView;
   ibc::gl::glXYZf_RGBAub *mData;
   size_t  mDataNum;
+
+  bool  mHasColorData;
+  PointColorMode   mPointColorMode;
+
+  ibc::image::ColorMap::ColorMapIndex mColorMapIndex;
+  std::vector<ibc::image::ColorMap::ColorMapIndex>  mColorMapIndexTable;
+  ColorMapAxis  mColorMapAxis;
+  int mColorMapRepeatNum;
+  double  mColorMapFrom;
+  double  mColorMapTo;
 
   // Member functions ----------------------------------------------------------
   // ---------------------------------------------------------------------------
@@ -120,9 +155,9 @@ protected:
   bool  readPLY(const char *inFileName)
   {
     ibc::gl::file::PLYHeader  *header;
-    void  *fileDataPtr;
+    unsigned char *fileDataPtr;
     size_t  fileDataSize;
-    char  *headerStrBufPtr;
+    char  *headerStrBufPtr = NULL;
 
     if (mData != NULL)
     {
@@ -139,12 +174,57 @@ protected:
     if (ibc::gl::file::PLYFile::get_glXYZf_RGBAub(*header, fileDataPtr, fileDataSize,
                                                  &mData, &mDataNum) == false)
     {
+      delete header;
       return false;
     }
-    GLfloat param[4];
-    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, param);
+    GLfloat param[4], minMax[6];
+    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, param, minMax);
     mGLView->setDataPtr((float *)mData, mDataNum);
     mGLView->setModelFitParam(param);
+
+    QString fileName(inFileName);
+    QFileInfo fileInfo(fileName);
+
+    mUI.mFileName->setText(fileInfo.fileName());
+    mUI.mFilePath->setText(fileInfo.absolutePath());
+    mUI.mFileSize->setText(QString("%1 bytes").arg(fileInfo.size()));
+    mUI.mFileCreated->setText(fileInfo.created().toString());
+    mUI.mFileModified->setText(fileInfo.lastModified().toString());
+    //
+    mUI.mPLYPointsNum->setText(QString("%1").arg(mDataNum));
+    std::string str = header->getColorFormatStr(ibc::gl::file::PLYHeader::ELEMENT_TYPE_VERTEX);
+    if (str.size() == 0)
+    {
+      mHasColorData = false;
+      mPointColorMode = POINT_COLOR_MODE_MAP;
+      mUI.mPLYPointColor->setText("No color data");
+    }
+    else
+    {
+      mHasColorData = true;
+      mPointColorMode = POINT_COLOR_MODE_FILE;
+      mUI.mPLYPointColor->setText(QString(str.c_str()));
+    }
+    str = header->getFormatStr();
+    mUI.mPLYFormat->setText(QString(str.c_str()));
+    size_t  index;
+    if (header->findElementIndex(ibc::gl::file::PLYHeader::ELEMENT_TYPE_FACE, &index) == false)
+      mUI.mPLYFace->setText(QString("none"));
+    else
+      mUI.mPLYFace->setText(QString("has face data"));
+    updatePointColorModeUI();
+    mUI.mPLYXMin->setText(QString("%1").arg(minMax[0]));
+    mUI.mPLYXMax->setText(QString("%1").arg(minMax[1]));
+    mUI.mPLYYMin->setText(QString("%1").arg(minMax[2]));
+    mUI.mPLYYMax->setText(QString("%1").arg(minMax[3]));
+    mUI.mPLYZMin->setText(QString("%1").arg(minMax[4]));
+    mUI.mPLYZMax->setText(QString("%1").arg(minMax[5]));
+    mUI.mPLYHeader->setPlainText(QString(headerStrBufPtr));
+
+    delete headerStrBufPtr;
+    delete fileDataPtr;
+    delete header;
+
     return true;
   }
   // ---------------------------------------------------------------------------
@@ -185,11 +265,77 @@ protected:
         mData[width * i + j].a = 255;
       }
 
-    GLfloat param[4];
-    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, param);
+    GLfloat param[4], minMax[6];
+    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, param, minMax);
     mGLView->setDataPtr((float *)mData, mDataNum);
     mGLView->setModelFitParam(param);
     return true;
+  }
+
+  // UI related functions ------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // updateFileInfo
+  // ---------------------------------------------------------------------------
+  /*virtual void  updateFileInfo(const QString &inFileName)
+  {
+  }*/
+
+  // ---------------------------------------------------------------------------
+  // initPointColorModeUI
+  // ---------------------------------------------------------------------------
+  void  initPointColorModeUI()
+  {
+    mHasColorData = false;
+    mPointColorMode = POINT_COLOR_MODE_SINGLE;
+    //
+    updatePointColorModeUI();
+  }
+  // ---------------------------------------------------------------------------
+  // updatePointColorModeUI
+  // ---------------------------------------------------------------------------
+  void  updatePointColorModeUI()
+  {
+    mUI.mPointColorMode->clear();
+    mUI.mPointColorMode->addItem(QApplication::translate("main", "Single Color"));
+    mUI.mPointColorMode->addItem(QApplication::translate("main", "Color Map"));
+    if (mHasColorData)
+      mUI.mPointColorMode->addItem(QApplication::translate("main", "From File"));
+    mUI.mPointColorMode->setCurrentIndex(mPointColorMode);
+  }
+  // ---------------------------------------------------------------------------
+  // initColorMapUI
+  // ---------------------------------------------------------------------------
+  void  initColorMapUI()
+  {
+    std::vector<std::string>  strTable;
+
+    ibc::image::ColorMap::getColorMapNameTable(&strTable, &mColorMapIndexTable);
+    for (size_t i = 0; i < strTable.size(); i++)
+      mUI.mColorMapTheme->addItem(QString(strTable[i].c_str()));
+    mUI.mColorMapAxis->addItem(QString("x"));
+    mUI.mColorMapAxis->addItem(QString("y"));
+    mUI.mColorMapAxis->addItem(QString("z"));
+    //
+    mColorMapIndex = ibc::image::ColorMap::CMIndex_RainbowWide;
+    mColorMapAxis = COLOR_MAP_AXIS_Z;
+    mColorMapRepeatNum = 1;
+    mColorMapFrom = 0;
+    mColorMapTo = 0;
+    //
+    updateColorMapUI();
+  }
+  // ---------------------------------------------------------------------------
+  // updateColorMapUI
+  // ---------------------------------------------------------------------------
+  void  updateColorMapUI()
+  {
+    auto index = std::find( mColorMapIndexTable.cbegin(),
+                            mColorMapIndexTable.cend(), mColorMapIndex);
+    mUI.mColorMapTheme->setCurrentIndex((index - mColorMapIndexTable.cbegin()));
+    mUI.mColorMapAxis->setCurrentIndex(mColorMapAxis);
+    mUI.mColorMapRepeatNum->setValue(mColorMapRepeatNum);
+    mUI.mColorMapFrom->setValue(mColorMapFrom);
+    mUI.mColorMapTo->setValue(mColorMapTo);
   }
 
   // Window (app) behavior implementations -------------------------------------
@@ -198,12 +344,12 @@ protected:
   // ---------------------------------------------------------------------------
   virtual bool  appInit()
   {
-    if (mOptFileNameSpecified)
+    if (mAppOptFileNameSpecified)
       return readPLY(mFileName.toStdString().c_str());
     bool  isCanceled;
     if (openFile(&isCanceled) == false)
     {
-      if (mOptEnaleTestData && isCanceled)
+      if (mAppOptEnaleTestData && isCanceled)
         return generateTestData();
       return false;
     }
@@ -217,10 +363,10 @@ protected:
   virtual void showEvent(QShowEvent *event)
   {
     QWidget::showEvent(event);
-    if (mInitFinished)
-      return;
 
-    mInitFinished = true;
+    if (mAppInitCalled)
+      return;
+    mAppInitCalled = true;
     if (appInit() == false)
     {
       // To quit the app here, we need to do the following tricky QTimer call here.

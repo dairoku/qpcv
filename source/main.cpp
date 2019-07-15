@@ -61,12 +61,12 @@ int main(int argc, char *argv[])
   const QStringList args = parser.positionalArguments();
   if (args.isEmpty() == false)
   {
-    window.mOptFileNameSpecified = true;
+    window.mAppOptFileNameSpecified = true;
     window.mFileName = args[0];
   }
   if (parser.isSet("enableTestData"))
   {
-    window.mOptEnaleTestData = true;
+    window.mAppOptEnaleTestData = true;
   }
 
   window.show();
