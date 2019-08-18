@@ -154,9 +154,9 @@
                <widget class="QComboBox" name="mPointColorMode"/>
               </item>
               <item row="2" column="0">
-               <widget class="QLabel" name="label_3">
+               <widget class="QLabel" name="mColorSettingLabel">
                 <property name="text">
-                 <string>Single Color Setting</string>
+                 <string>Color Setting</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -174,6 +174,9 @@
                 </item>
                 <item>
                  <widget class="QLabel" name="mPointColorBox">
+                  <property name="autoFillBackground">
+                   <bool>true</bool>
+                  </property>
                   <property name="frameShape">
                    <enum>QFrame::Box</enum>
                   </property>
@@ -194,7 +197,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QGroupBox" name="groupBox_6">
+             <widget class="QGroupBox" name="mColorMapGroupBox">
               <property name="title">
                <string>Color Map</string>
               </property>
@@ -242,7 +245,17 @@
                   </widget>
                  </item>
                  <item row="3" column="1">
-                  <widget class="QDoubleSpinBox" name="mColorMapFrom"/>
+                  <widget class="QDoubleSpinBox" name="mColorMapFrom">
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="minimum">
+                    <double>-999999999999.000000000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>999999999999.000000000000000</double>
+                   </property>
+                  </widget>
                  </item>
                  <item row="4" column="0">
                   <widget class="QLabel" name="label_11">
@@ -252,12 +265,22 @@
                   </widget>
                  </item>
                  <item row="4" column="1">
-                  <widget class="QDoubleSpinBox" name="mColorMapTo"/>
+                  <widget class="QDoubleSpinBox" name="mColorMapTo">
+                   <property name="decimals">
+                    <number>4</number>
+                   </property>
+                   <property name="minimum">
+                    <double>-999999999999.000000000000000</double>
+                   </property>
+                   <property name="maximum">
+                    <double>999999999999.000000000000000</double>
+                   </property>
+                  </widget>
                  </item>
                  <item row="5" column="1">
-                  <widget class="QCheckBox" name="checkBox">
+                  <widget class="QCheckBox" name="mUnmappedPoints">
                    <property name="text">
-                    <string>Show using single color setting</string>
+                    <string>Show</string>
                    </property>
                   </widget>
                  </item>
@@ -295,7 +318,20 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QDoubleSpinBox" name="mDataScale"/>
+               <widget class="QDoubleSpinBox" name="mDataScale">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>-999999999999.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>999999999999.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+               </widget>
               </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_14">
@@ -319,13 +355,55 @@
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="QDoubleSpinBox" name="mDataXOffset"/>
+               <widget class="QDoubleSpinBox" name="mDataXOffset">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>-999999999999.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>999999999999.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+               </widget>
               </item>
               <item row="2" column="1">
-               <widget class="QDoubleSpinBox" name="mDataYOffset"/>
+               <widget class="QDoubleSpinBox" name="mDataYOffset">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>-999999999999.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>999999999999.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000000000000000</double>
+                </property>
+               </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QDoubleSpinBox" name="mDataZOffset"/>
+               <widget class="QDoubleSpinBox" name="mDataZOffset">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>-999999999999.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>999999999999.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.100000000000000</double>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -360,7 +438,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QLabel" name="mDisplayColorox">
+                 <widget class="QLabel" name="mDisplayColorBox">
                   <property name="frameShape">
                    <enum>QFrame::Box</enum>
                   </property>

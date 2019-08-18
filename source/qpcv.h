@@ -96,8 +96,11 @@ public:
     // Initialize UI
     mUI.setupUi(this);
     setCentralWidget(mGLView);
+    
+    initPointSettingUI();
     initPointColorModeUI();
     initColorMapUI();
+    initDataParamUI();
   }
   // ---------------------------------------------------------------------------
   // ~qpcvWindow
@@ -120,12 +123,11 @@ protected:
   size_t  mDataNum;
 
   bool  mHasColorData;
-  PointColorMode   mPointColorMode;
 
   ibc::image::ColorMap::ColorMapIndex mColorMapIndex;
   std::vector<ibc::image::ColorMap::ColorMapIndex>  mColorMapIndexTable;
-  ColorMapAxis  mColorMapAxis;
-  int mColorMapRepeatNum;
+
+  GLfloat mParam[4], mMinMax[6];
   double  mColorMapFrom;
   double  mColorMapTo;
 
@@ -177,10 +179,13 @@ protected:
       delete header;
       return false;
     }
-    GLfloat param[4], minMax[6];
-    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, param, minMax);
-    mGLView->setDataPtr((float *)mData, mDataNum);
-    mGLView->setModelFitParam(param);
+    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, mParam, mMinMax);
+    mGLView->mDataModel.setDataPtr((float *)mData, mDataNum);
+    mGLView->mDataModel.setModelFitParam(mParam);
+    mGLView->mDataModel.setColorMapAxis(2);
+    mColorMapFrom = mMinMax[4];
+    mColorMapTo   = mMinMax[5];
+    calcColorMapParams();
 
     QString fileName(inFileName);
     QFileInfo fileInfo(fileName);
@@ -196,13 +201,13 @@ protected:
     if (str.size() == 0)
     {
       mHasColorData = false;
-      mPointColorMode = POINT_COLOR_MODE_MAP;
+      mGLView->mDataModel.setColorMode(POINT_COLOR_MODE_MAP);
       mUI.mPLYPointColor->setText("No color data");
     }
     else
     {
       mHasColorData = true;
-      mPointColorMode = POINT_COLOR_MODE_FILE;
+      mGLView->mDataModel.setColorMode(POINT_COLOR_MODE_FILE);
       mUI.mPLYPointColor->setText(QString(str.c_str()));
     }
     str = header->getFormatStr();
@@ -212,14 +217,18 @@ protected:
       mUI.mPLYFace->setText(QString("none"));
     else
       mUI.mPLYFace->setText(QString("has face data"));
-    updatePointColorModeUI();
-    mUI.mPLYXMin->setText(QString("%1").arg(minMax[0]));
-    mUI.mPLYXMax->setText(QString("%1").arg(minMax[1]));
-    mUI.mPLYYMin->setText(QString("%1").arg(minMax[2]));
-    mUI.mPLYYMax->setText(QString("%1").arg(minMax[3]));
-    mUI.mPLYZMin->setText(QString("%1").arg(minMax[4]));
-    mUI.mPLYZMax->setText(QString("%1").arg(minMax[5]));
+
+    mUI.mPLYXMin->setText(QString("%1").arg(mMinMax[0]));
+    mUI.mPLYXMax->setText(QString("%1").arg(mMinMax[1]));
+    mUI.mPLYYMin->setText(QString("%1").arg(mMinMax[2]));
+    mUI.mPLYYMax->setText(QString("%1").arg(mMinMax[3]));
+    mUI.mPLYZMin->setText(QString("%1").arg(mMinMax[4]));
+    mUI.mPLYZMax->setText(QString("%1").arg(mMinMax[5]));
     mUI.mPLYHeader->setPlainText(QString(headerStrBufPtr));
+
+    updatePointColorModeUI();
+    updateColorMapUI();
+    updateDataParamUI();
 
     delete headerStrBufPtr;
     delete fileDataPtr;
@@ -265,10 +274,9 @@ protected:
         mData[width * i + j].a = 255;
       }
 
-    GLfloat param[4], minMax[6];
-    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, param, minMax);
-    mGLView->setDataPtr((float *)mData, mDataNum);
-    mGLView->setModelFitParam(param);
+    ibc::gl::file::PLYFile::calcFitParam_glXYZf_RGBAub(mData, mDataNum, mParam, mMinMax);
+    mGLView->mDataModel.setDataPtr((float *)mData, mDataNum);
+    mGLView->mDataModel.setModelFitParam(mParam);
     return true;
   }
 
@@ -286,21 +294,44 @@ protected:
   void  initPointColorModeUI()
   {
     mHasColorData = false;
-    mPointColorMode = POINT_COLOR_MODE_SINGLE;
     //
     updatePointColorModeUI();
+    //
+    connect(mUI.mPointColorMode,
+            static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this,
+            [=](int i)
+            {
+              if (i == 1)
+                mUI.mColorMapGroupBox->setEnabled(true);
+              else
+                mUI.mColorMapGroupBox->setEnabled(false);
+              bool  uiEnabled = true;
+              if (i == 2)
+                uiEnabled = false;
+              mUI.mColorSettingLabel->setEnabled(uiEnabled);
+              mUI.mPointColorLabel->setEnabled(uiEnabled);
+              mUI.mPointColorBox->setEnabled(uiEnabled);
+              mUI.mPointColorButton->setEnabled(uiEnabled);
+              //
+              mGLView->mDataModel.setColorMode(i);
+              mGLView->update();
+            });
   }
   // ---------------------------------------------------------------------------
   // updatePointColorModeUI
   // ---------------------------------------------------------------------------
   void  updatePointColorModeUI()
   {
+    // We need to backup the setting here. Since clear() fires "currentIndexChanged"
+    int colorMode = mGLView->mDataModel.getColorMode();
+
     mUI.mPointColorMode->clear();
     mUI.mPointColorMode->addItem(QApplication::translate("main", "Single Color"));
     mUI.mPointColorMode->addItem(QApplication::translate("main", "Color Map"));
     if (mHasColorData)
       mUI.mPointColorMode->addItem(QApplication::translate("main", "From File"));
-    mUI.mPointColorMode->setCurrentIndex(mPointColorMode);
+    mUI.mPointColorMode->setCurrentIndex(colorMode);
   }
   // ---------------------------------------------------------------------------
   // initColorMapUI
@@ -316,13 +347,80 @@ protected:
     mUI.mColorMapAxis->addItem(QString("y"));
     mUI.mColorMapAxis->addItem(QString("z"));
     //
-    mColorMapIndex = ibc::image::ColorMap::CMIndex_RainbowWide;
-    mColorMapAxis = COLOR_MAP_AXIS_Z;
-    mColorMapRepeatNum = 1;
+    mColorMapIndex = mGLView->mDataModel.getColorMapIndex();
     mColorMapFrom = 0;
     mColorMapTo = 0;
     //
     updateColorMapUI();
+    //
+    connect(mUI.mColorMapTheme,
+            static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this,
+            [=](int d)
+            {
+              mGLView->mDataModel.setColorMapIndex(mColorMapIndexTable[d]);
+              mGLView->update();
+            });
+    connect(mUI.mColorMapAxis,
+            static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this,
+            [=](int d)
+            {
+              mGLView->mDataModel.setColorMapAxis(d);
+              switch (d)
+              {
+                case 0:
+                  mColorMapFrom = mMinMax[0];
+                  mColorMapTo   = mMinMax[1];
+                  break;
+                case 1:
+                  mColorMapFrom = mMinMax[2];
+                  mColorMapTo   = mMinMax[3];
+                  break;
+                case 2:
+                  mColorMapFrom = mMinMax[4];
+                  mColorMapTo   = mMinMax[5];
+                  break;
+              }
+              calcColorMapParams();
+              mUI.mColorMapFrom->setValue(mColorMapFrom);
+              mUI.mColorMapTo->setValue(mColorMapTo);
+              mGLView->update();
+            });
+    connect(mUI.mColorMapRepeatNum,
+            static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),
+            this,
+            [=](int i)
+            {
+              mGLView->mDataModel.setColorMapRepeatNum(i);
+              mGLView->update();
+            });
+    connect(mUI.mColorMapFrom,
+            static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+            this,
+            [=](double d)
+            {
+              mColorMapFrom = d;
+              calcColorMapParams();
+              mGLView->update();
+            });
+    connect(mUI.mColorMapTo,
+            static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+            this,
+            [=](double d)
+            {
+              mColorMapTo = d;
+              calcColorMapParams();
+              mGLView->update();
+            });
+    connect(mUI.mUnmappedPoints,
+            static_cast<void(QCheckBox::*)(bool)>(&QAbstractButton::toggled),
+            this,
+            [=](bool d)
+            {
+              mGLView->mDataModel.setColorMapUnmapMode(d);
+              mGLView->update();
+            });
   }
   // ---------------------------------------------------------------------------
   // updateColorMapUI
@@ -332,10 +430,144 @@ protected:
     auto index = std::find( mColorMapIndexTable.cbegin(),
                             mColorMapIndexTable.cend(), mColorMapIndex);
     mUI.mColorMapTheme->setCurrentIndex((index - mColorMapIndexTable.cbegin()));
-    mUI.mColorMapAxis->setCurrentIndex(mColorMapAxis);
-    mUI.mColorMapRepeatNum->setValue(mColorMapRepeatNum);
+    mUI.mColorMapAxis->setCurrentIndex(mGLView->mDataModel.getColorMapAxis());
+    mUI.mColorMapRepeatNum->setValue(mGLView->mDataModel.getColorMapRepeatNum());
     mUI.mColorMapFrom->setValue(mColorMapFrom);
     mUI.mColorMapTo->setValue(mColorMapTo);
+    if (mGLView->mDataModel.getColorMapUnmapMode() == 0)
+      mUI.mUnmappedPoints->setChecked(false);
+    else
+      mUI.mUnmappedPoints->setChecked(true);
+  }
+  // ---------------------------------------------------------------------------
+  // initPointSettingUI
+  // ---------------------------------------------------------------------------
+  void  initPointSettingUI()
+  {
+    mUI.mPointSize->setMinimum(0.01);
+    mUI.mPointColorBox->setAutoFillBackground(true);  // We already did this with the Qt Designer
+    updatePointSettingUI();
+    //
+    connect(mUI.mPointSize,
+            static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+            this,
+            [=](double d)
+            {
+              mGLView->mDataModel.setPointSize(d);
+              mGLView->update();
+            });
+    connect(mUI.mPointColorButton,
+            static_cast<void(QAbstractButton::*)()>(&QAbstractButton::released),
+            this,
+            [=]()
+            {
+              const float *prevColor = mGLView->mDataModel.getSingleColor();
+              int r = prevColor[0] * 255.0;
+              int g = prevColor[1] * 255.0;
+              int b = prevColor[2] * 255.0;
+              //
+              QColorDialog  dialog(this);
+              dialog.setCurrentColor(QColor(r, g, b));
+              dialog.exec();
+              QColor  selColor = dialog.selectedColor();
+              if (selColor.isValid() == false)
+                return;
+              //
+              float newColor[4];
+              newColor[0] = selColor.red() / 255.0;
+              newColor[1] = selColor.green() / 255.0;
+              newColor[2] = selColor.blue() / 255.0;
+              newColor[3] = 1.0;
+              mGLView->mDataModel.setSingleColor(newColor);
+              updatePointSettingUI();
+              mGLView->update();
+            });
+  }
+  // ---------------------------------------------------------------------------
+  // updatePointSettingUI
+  // ---------------------------------------------------------------------------
+  void  updatePointSettingUI()
+  {
+    mUI.mPointSize->setValue(mGLView->mDataModel.getPointSize());
+    const float *color = mGLView->mDataModel.getSingleColor();
+    int r = color[0] * 255.0;
+    int g = color[1] * 255.0;
+    int b = color[2] * 255.0;
+    char  buf[256];
+    sprintf(buf, "[%03d, %03d, %03d]", r, g, b);
+    mUI.mPointColorLabel->setText(buf);
+
+    QPalette palette = mUI.mPointColorBox->palette();
+    palette.setColor(mUI.mPointColorBox->backgroundRole(), QColor(r, g, b));
+    //palette.setColor(mUI.mPointColorBox->foregroundRole(), QColor(r, g, b);
+    mUI.mPointColorBox->setPalette(palette);
+  }
+  // ---------------------------------------------------------------------------
+  // calcColorMapParams
+  // ---------------------------------------------------------------------------
+  void  calcColorMapParams()
+  {
+    double  gain;
+    if (mColorMapFrom >= mColorMapTo)
+      gain = 0;
+    else
+      gain = 1.0 / (mColorMapTo - mColorMapFrom);
+    mGLView->mDataModel.setColorMapOffset(mColorMapFrom);
+    mGLView->mDataModel.setColorMapGain(gain);
+  }
+  // ---------------------------------------------------------------------------
+  // initDataParamUI
+  // ---------------------------------------------------------------------------
+  void  initDataParamUI()
+  {
+    updateDataParamUI();
+    //
+    connect(mUI.mDataScale,
+            static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+            this,
+            [=](double d)
+            {
+              mParam[3] = d;
+              mGLView->mDataModel.setModelFitParam(mParam);
+              mGLView->update();
+            });
+    connect(mUI.mDataXOffset,
+            static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+            this,
+            [=](double d)
+            {
+              mParam[0] = d;
+              mGLView->mDataModel.setModelFitParam(mParam);
+              mGLView->update();
+            });
+    connect(mUI.mDataYOffset,
+            static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+            this,
+            [=](double d)
+            {
+              mParam[1] = d;
+              mGLView->mDataModel.setModelFitParam(mParam);
+              mGLView->update();
+            });
+    connect(mUI.mDataZOffset,
+            static_cast<void(QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged),
+            this,
+            [=](double d)
+            {
+              mParam[2] = d;
+              mGLView->mDataModel.setModelFitParam(mParam);
+              mGLView->update();
+            });
+  }
+  // ---------------------------------------------------------------------------
+  // updateDataParamUI
+  // ---------------------------------------------------------------------------
+  void  updateDataParamUI()
+  {
+    mUI.mDataScale->setValue(mParam[3]);
+    mUI.mDataXOffset->setValue(mParam[0]);
+    mUI.mDataYOffset->setValue(mParam[1]);
+    mUI.mDataZOffset->setValue(mParam[2]);
   }
 
   // Window (app) behavior implementations -------------------------------------
