@@ -421,10 +421,13 @@
               <property name="labelAlignment">
                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
               </property>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_18">
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_3">
                 <property name="text">
-                 <string>Background Color</string>
+                 <string>Background Mode</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -456,22 +459,15 @@
                 </item>
                </layout>
               </item>
-              <item row="5" column="1">
-               <widget class="QCheckBox" name="mDisplaySmooth">
+              <item row="2" column="0">
+               <widget class="QLabel" name="mBackgroundColorSettingLabel">
                 <property name="text">
-                 <string>Smooth</string>
+                 <string>Background Color</string>
                 </property>
                </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QCheckBox" name="mDisplayDoundaryBox">
-                <property name="text">
-                 <string>Show</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1">
-               <widget class="QCheckBox" name="mDisplayAxis">
+               <widget class="QCheckBox" name="mDisplayBoundaryBox">
                 <property name="text">
                  <string>Show</string>
                 </property>
@@ -484,6 +480,13 @@
                 </property>
                </widget>
               </item>
+              <item row="4" column="1">
+               <widget class="QCheckBox" name="mDisplayAxis">
+                <property name="text">
+                 <string>Show</string>
+                </property>
+               </widget>
+              </item>
               <item row="4" column="0">
                <widget class="QLabel" name="label_6">
                 <property name="text">
@@ -491,12 +494,8 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_12">
-                <property name="text">
-                 <string>Mouse Control</string>
-                </property>
-               </widget>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="mBackgroundColorMode"/>
               </item>
              </layout>
             </item>
@@ -834,6 +833,9 @@
    </property>
   </action>
   <action name="actionSave">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Save</string>
    </property>
@@ -844,11 +846,17 @@
    </property>
   </action>
   <action name="actionZoom_In">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Zoom In</string>
    </property>
   </action>
   <action name="actionZoom_Out">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Zoom Out</string>
    </property>

@@ -75,6 +75,15 @@ Q_OBJECT
       COLOR_MAP_AXIS_Z
     };
 
+    enum  BackdropColorMode
+    {
+      BACKDROP_COLOR_MODE_SINGLE   = 0,
+      BACKDROP_COLOR_MODE_BLUE,
+      BACKDROP_COLOR_MODE_DARK_BLUE,
+      BACKDROP_COLOR_MODE_GRAY,
+      BACKDROP_COLOR_MODE_DARK_GRAY
+    };
+
 public:
   // Constructors and Destructor -----------------------------------------------
   // ---------------------------------------------------------------------------
@@ -93,6 +102,12 @@ public:
     mDataNum = 0;
     mGLView = new ibc::qt::GLPointCloudView();
 
+    // Initialize background related variables
+    mBackColor[0] = 0.3;
+    mBackColor[1] = 0.3;
+    mBackColor[2] = 0.3;
+    mBackColorMode = BACKDROP_COLOR_MODE_SINGLE;
+
     // Initialize UI
     mUI.setupUi(this);
     setCentralWidget(mGLView);
@@ -101,6 +116,7 @@ public:
     initPointColorModeUI();
     initColorMapUI();
     initDataParamUI();
+    initDisplaySettingUI();
   }
   // ---------------------------------------------------------------------------
   // ~qpcvWindow
@@ -172,7 +188,7 @@ protected:
     {
       return false;
     }
-    header->debugDumpHeader(&std::cout);
+    //header->debugDumpHeader(&std::cout);
     if (ibc::gl::file::PLYFile::get_glXYZf_RGBAub(*header, fileDataPtr, fileDataSize,
                                                  &mData, &mDataNum) == false)
     {
@@ -569,6 +585,100 @@ protected:
     mUI.mDataYOffset->setValue(mParam[1]);
     mUI.mDataZOffset->setValue(mParam[2]);
   }
+  // ---------------------------------------------------------------------------
+  // initDisplaySettingUI
+  // ---------------------------------------------------------------------------
+  void  initDisplaySettingUI()
+  {
+    mUI.mDisplayColorBox->setAutoFillBackground(true);  // We already did this with the Qt Designer
+    mUI.mBackgroundColorMode->clear();
+    mUI.mBackgroundColorMode->addItem(QApplication::translate("main", "Single Color"));
+    mUI.mBackgroundColorMode->addItem(QApplication::translate("main", "Blue Gradation"));
+    mUI.mBackgroundColorMode->addItem(QApplication::translate("main", "Dark Blue Gradation"));
+    mUI.mBackgroundColorMode->addItem(QApplication::translate("main", "Gray Gradation"));
+    mUI.mBackgroundColorMode->addItem(QApplication::translate("main", "Dark Gray Gradation"));
+    mUI.mBackgroundColorMode->setCurrentIndex(mBackColorMode);
+
+    updatDisplaySettingUI();
+    //
+    connect(mUI.mBackgroundColorMode,
+            static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this,
+            [=](int i)
+            {
+              bool  uiEnabled = false;
+              if (i == 0)
+                uiEnabled = true;
+              mUI.mBackgroundColorSettingLabel->setEnabled(uiEnabled);
+              mUI.mDisplayColorLabel->setEnabled(uiEnabled);
+              mUI.mDisplayColorBox->setEnabled(uiEnabled);
+              mUI.mDisplayColorButton->setEnabled(uiEnabled);
+
+              const GLfloat *topColor, *bottomColor;
+              mBackColorMode = (BackdropColorMode )i;
+              getBackdropColor(&topColor, &bottomColor);
+              mGLView->mBackdropModel.setBackdropColor(topColor, bottomColor);;
+              mGLView->update();
+            });
+    connect(mUI.mDisplayColorButton,
+            static_cast<void(QAbstractButton::*)()>(&QAbstractButton::released),
+            this,
+            [=]()
+            {
+              int r = mBackColor[0] * 255.0;
+              int g = mBackColor[1] * 255.0;
+              int b = mBackColor[2] * 255.0;
+              //
+              QColorDialog  dialog(this);
+              dialog.setCurrentColor(QColor(r, g, b));
+              dialog.exec();
+              QColor  selColor = dialog.selectedColor();
+              if (selColor.isValid() == false)
+                return;
+              //
+              mBackColor[0] = selColor.red() / 255.0;
+              mBackColor[1] = selColor.green() / 255.0;
+              mBackColor[2] = selColor.blue() / 255.0;
+              mGLView->mBackdropModel.setBackdropColor(mBackColor, mBackColor);;
+              updatDisplaySettingUI();
+              mGLView->update();
+            });
+    connect(mUI.mDisplayBoundaryBox,
+            static_cast<void(QCheckBox::*)(bool)>(&QAbstractButton::toggled),
+            this,
+            [=](bool d)
+            {
+              mGLView->mCubeModel.setEnabled(d);
+              mGLView->update();
+            });
+    connect(mUI.mDisplayAxis,
+            static_cast<void(QCheckBox::*)(bool)>(&QAbstractButton::toggled),
+            this,
+            [=](bool d)
+            {
+              mGLView->mAxisModel.setEnabled(d);
+              mGLView->update();
+            });
+  }
+  // ---------------------------------------------------------------------------
+  // updatDisplaySettingUI
+  // ---------------------------------------------------------------------------
+  void  updatDisplaySettingUI()
+  {
+    mUI.mDisplayBoundaryBox->setChecked(mGLView->mCubeModel.isEnabled());
+    mUI.mDisplayAxis->setChecked(mGLView->mAxisModel.isEnabled());
+
+    int r = mBackColor[0] * 255.0;
+    int g = mBackColor[1] * 255.0;
+    int b = mBackColor[2] * 255.0;
+    char  buf[256];
+    sprintf(buf, "[%03d, %03d, %03d]", r, g, b);
+    mUI.mDisplayColorLabel->setText(buf);
+
+    QPalette palette = mUI.mDisplayColorBox->palette();
+    palette.setColor(mUI.mDisplayColorBox->backgroundRole(), QColor(r, g, b));
+    mUI.mDisplayColorBox->setPalette(palette);
+  }
 
   // Window (app) behavior implementations -------------------------------------
   // ---------------------------------------------------------------------------
@@ -611,6 +721,51 @@ protected:
 
 private:
   Ui::qpcvClass mUI;
+  GLfloat mBackColor[3];
+  BackdropColorMode mBackColorMode;
+
+  // ---------------------------------------------------------------------------
+  // getBackdropClor
+  // ---------------------------------------------------------------------------
+  void getBackdropColor(const GLfloat **outTopColor, const GLfloat **outBottomColor)
+  {
+    static const GLfloat  colorTable[] =
+    {
+      0.780f, 0.860f, 0.930f,
+      0.360f, 0.500f, 0.660f,
+      0.000f, 0.360f, 0.600f,
+      0.000f, 0.070f, 0.200f,
+      0.930f, 0.900f, 0.900f,
+      0.360f, 0.300f, 0.300f,
+      0.430f, 0.400f, 0.400f,
+      0.060f, 0.010f, 0.010f,
+    };
+
+    switch (mBackColorMode)
+    {
+      case BACKDROP_COLOR_MODE_BLUE:
+        *outTopColor = &(colorTable[0]);
+        *outBottomColor = &(colorTable[3]);
+        break;
+      case BACKDROP_COLOR_MODE_DARK_BLUE:
+        *outTopColor = &(colorTable[6]);
+        *outBottomColor = &(colorTable[9]);
+        break;
+      case BACKDROP_COLOR_MODE_GRAY:
+        *outTopColor = &(colorTable[12]);
+        *outBottomColor = &(colorTable[15]);
+        break;
+      case BACKDROP_COLOR_MODE_DARK_GRAY:
+        *outTopColor = &(colorTable[18]);
+        *outBottomColor = &(colorTable[21]);
+        break;
+      default:
+      //case BACKDROP_COLOR_MODE_SINGLE:
+        *outTopColor = mBackColor;
+        *outBottomColor = mBackColor;
+        break;
+    }
+  }
 
 private slots:
   // ---------------------------------------------------------------------------

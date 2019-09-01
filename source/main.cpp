@@ -46,6 +46,8 @@ int main(int argc, char *argv[])
   QApplication::setApplicationName("qpcv");
   QApplication::setApplicationVersion("1.0");
 
+  app.setStyle(QStyleFactory::create("Fusion"));
+
   QCommandLineParser  parser;
   parser.addHelpOption();
   parser.addVersionOption();
