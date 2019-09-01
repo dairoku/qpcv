@@ -1,0 +1,3 @@
+[submodule "libibc"]
+	path = libibc
+	url = ../libibc.git

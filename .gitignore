@@ -26,6 +26,9 @@
 *.a
 *.lib
 
+# App Test file
+*.ply
+
 # Executables
 *.exe
 *.out
