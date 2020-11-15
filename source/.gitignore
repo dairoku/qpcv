@@ -1,5 +1,6 @@
 # qmake related files
 Makefile
+Makefile.*
 .qmake.stash
 moc_*.cpp
 moc_*.h
