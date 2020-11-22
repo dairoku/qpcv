@@ -28,7 +28,7 @@
   \author   Dairoku Sekiguchi
   \version  1.0.0
   \date     2019/05/01
-  \brief    
+  \brief
 */
 
 #include "qpcv.h"
@@ -41,6 +41,12 @@ int main(int argc, char *argv[])
   QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
   QApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
 #endif
+  QSurfaceFormat fmt;
+  fmt.setDepthBufferSize(24);
+  fmt.setSamples(4);
+  fmt.setVersion(LIBIBC_OPENGL_MAJOR_VER, LIBIBC_OPENGL_MINOR_VER);
+  fmt.setProfile(QSurfaceFormat::CoreProfile);
+  QSurfaceFormat::setDefaultFormat(fmt);
 
   QApplication app(argc, argv);
   QApplication::setApplicationName("qpcv");

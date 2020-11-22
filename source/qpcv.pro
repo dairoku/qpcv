@@ -10,6 +10,18 @@ QMAKE_CXXFLAGS += -std=c++17
 # for Visual Studio the following might work (not tested)
 # QMAKE_CXXFLAGS += /std::c++17
 
+# Under some environment (System having Discreet Graphics?)
+#DEFINES += LIBIBC_OPENGL_MAJOR_VER="4"
+#DEFINES += LIBIBC_OPENGL_MINOR_VER="5"
+
+# MAC environment we can go up to 4.1
+#DEFINES += LIBIBC_OPENGL_MAJOR_VER="4"
+#DEFINES += LIBIBC_OPENGL_MINOR_VER="1"
+
+# 3.3 works for the most environments
+DEFINES += LIBIBC_OPENGL_MAJOR_VER="3"
+DEFINES += LIBIBC_OPENGL_MINOR_VER="3"
+
 INCLUDEPATH += \
   ../libibc/include \
   .
