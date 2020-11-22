@@ -28,7 +28,7 @@
   \author   Dairoku Sekiguchi
   \version  1.0.0
   \date     2019/05/01
-  \brief    
+  \brief
 */
 
 #ifndef QPCV_WINDOW_H_
@@ -103,15 +103,15 @@ public:
     mGLView = new ibc::qt::GLPointCloudView();
 
     // Initialize background related variables
-    mBackColor[0] = 0.3;
-    mBackColor[1] = 0.3;
-    mBackColor[2] = 0.3;
+    mBackColor[0] = 0.3f;
+    mBackColor[1] = 0.3f;
+    mBackColor[2] = 0.3f;
     mBackColorMode = BACKDROP_COLOR_MODE_SINGLE;
 
     // Initialize UI
     mUI.setupUi(this);
     setCentralWidget(mGLView);
-    
+
     initPointSettingUI();
     initPointColorModeUI();
     initColorMapUI();
@@ -790,4 +790,3 @@ private slots:
 };
 
 #endif  // #ifdef QPCV_WINDOW_H_
-
